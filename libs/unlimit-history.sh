@@ -1,0 +1,2 @@
+export HISTSIZE=-1
+export HISTFILESIZE=-1
