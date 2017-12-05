@@ -32,7 +32,7 @@ EOF
       echo $_TGPN_CMD | grep -qE $pattern && return
     done
     echo $_TGPN_CMD
-    telegram-send "✅$_TGPN_CMD" &
+    https_proxy=$tg_notice_prx telegram-send "✅$_TGPN_CMD" &
   }
 }
 PROMPT_COMMAND="_TGPN_postcommand_cbk"
