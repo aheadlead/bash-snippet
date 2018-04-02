@@ -4,13 +4,14 @@
 
 
 function __quick-systrace-show_help {
-    echo "快速启动 systrace"
+    echo "快速启动 systrace, 并启动所有 categories"
     echo
-    echo "用法: quick-systrace [-e/-s SERIAL] [-t TAG] [-h]"
+    echo "用法: quick-systrace [-e/-s SERIAL] [-t TAG] [-T SECONDS] [-h] [-d]"
     echo
-    echo "  -s      指定序列号"
-    echo "  -e      指定序列号 (和 -s 等价)"
-    echo "  -t      指定附在文件名中的标签"
+    echo "  -s      指定序列号 SERIAL"
+    echo "  -e      指定序列号 SERIAL (和 -s 等价)"
+    echo "  -t      指定附在文件名中的标签 TAG"
+    echo "  -T      抓取 SECONDS 秒的 trace"
     echo "  -h      显示本帮助"
     echo "  -d      trace 文件保存到临时目录"
 }
@@ -24,9 +25,10 @@ function quick-systrace {
 
     local tag=$(date +%T)
     local save_to_tempdir=
+    local seconds=
 
     # 解析 args
-    while getopts "de:hs:t:" OPT; do
+    while getopts "de:hs:t:T:" OPT; do
         case ${OPT} in
             d)  save_to_tempdir=1 ;;
             e)  serial=${OPTARG} ;;
@@ -34,6 +36,7 @@ function quick-systrace {
             h)  __quick-systrace-show_help
                 return ;;
             t)  tag=${OPTARG} ;;
+            T)  seconds=${OPTARG} ;;
         esac
     done
 
@@ -42,9 +45,16 @@ function quick-systrace {
         return
     fi
 
+    if [[ -n ${seconds} ]]; then
+        echo ${seconds} | grep -qE '^[0-9]+$' || {
+            echo "参数不正确: -T ${seconds}"
+            return
+        }
+    fi
+
     local product=$(adb -s ${serial} shell getprop ro.build.product \
-                    | xargs)  # trim white charactors
-    echo "product: ${product}"
+                    | tr -d '\r\n')
+    echo "Product: ${product}"
 
     local date_str=$(date +%F)
     local fname="${date_str}-${tag}.html"
@@ -68,12 +78,19 @@ function quick-systrace {
             | awk '$2 == "-" { printf("%s ", $1); }'
         )   
 
-        echo "类别: ${categories}"
+        echo "支持的 Categories: ${categories}"
         echo
 
-        python ${SYSTRACE_PATH}/systrace.py -e ${serial} -o ${abspath} ${categories} && {
-            xdg-open ${abspath}
-        }
+        local issue_command="python ${SYSTRACE_PATH}/systrace.py"
+
+        if [[ -n ${seconds} ]]; then
+            issue_command+=" -t ${seconds}"
+        fi
+
+        issue_command+=" -e ${serial} -o ${abspath} ${categories}"
+
+        ${issue_command} && xdg-open ${abspath}
+
         popd > /dev/null
     }
 
