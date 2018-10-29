@@ -39,4 +39,5 @@ function copy-serial {
     rm $tmp
 
     echo -n ${serial} | xsel -b -i
+    export ANDROID_SERIAL=${serial}
 }
